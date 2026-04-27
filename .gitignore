@@ -1,0 +1,38 @@
+# Kernel module build artifacts
+kernel/*.o
+kernel/*.ko
+kernel/*.mod
+kernel/*.mod.c
+kernel/*.mod.o
+kernel/.*.cmd
+kernel/modules.order
+kernel/Module.symvers
+kernel/.tmp_versions/
+kernel/.cache.mk
+
+# Daemon build artifacts
+daemon/procwatch_daemon
+
+# Python
+web/__pycache__/
+web/*.pyc
+*.egg-info/
+.venv/
+venv/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Backup files
+*.bak
