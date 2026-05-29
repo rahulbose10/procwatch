@@ -76,16 +76,25 @@ cat /dev/procwatch
 cat /dev/procwatch | grep EXEC
 ```
 
-## Sample output
+## output
 
 ```
-TIME         EVENT    PID      PPID       USER                 COMMAND
------------- -------- -------- ---------- -------------------- ---------------------
-14:23:01.447 FORK       15234     1182    john                 bash
-14:23:01.449 EXEC       15234     1182    john                 ls
-14:23:01.452 EXIT       15234     1182    john                 ls exit_code=0
-14:23:02.103 FORK       15235      892    root                 cron
-14:23:02.105 EXEC       15235      892    root                 run-parts
+IT   9468   9467     0 1780087495831406701 cat exit_code=2
+EXIT   9467   9466  1000 1780087495832396971 sudo exit_code=256
+EXIT   9466   6273  1000 1780087495833390300 sudo exit_code=2
+EXIT   9576   5585  1000 1780087497006991382 StreamTrans #42 exit_code=0
+FORK   9586   4395  1000 1780087497664100391 gnome-shell
+EXIT   9586   4395  1000 1780087498164477626 pool-gnome-shel exit_code=0
+FORK   9587   6273  1000 1780087499703918732 bash
+FORK   9588   6273  1000 1780087499704111430 bash
+EXEC   9588   6273  1000 1780087499704628023 bash
+EXEC   9587   6273  1000 1780087499704628070 bash
+FORK   9589   9587  1000 1780087499711940722 sudo
+FORK   9590   9589  1000 1780087499712565322 sudo
+EXEC   9590   9589     0 1780087499712814220 sudo
+EXIT   9451   5585  1000 1780087500435367454 StreamTrans #56 exit_code=0
+EXIT   9579   4578  1000 1780087503290214047 StreamT~ns #483 exit_code=0
+
 ```
 
 ## Project structure
