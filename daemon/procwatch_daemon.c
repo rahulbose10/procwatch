@@ -1,16 +1,6 @@
 /*
- * procwatch_daemon.c - ProcWatch User-Space Daemon
- *
- * Reads process events from /dev/procwatch and displays them.
- * Supports terminal output, JSON mode, and stats via ioctl.
- *
- * Usage:
- *   sudo ./procwatch_daemon               # terminal display
- *   sudo ./procwatch_daemon --json        # JSON output for web dashboard
- *   sudo ./procwatch_daemon --stats       # show statistics and exit
- *   sudo ./procwatch_daemon --help
- *
- * Build: gcc -O2 -Wall -o procwatch_daemon procwatch_daemon.c
+ * procwatch_daemon.c - reads events from /dev/procwatch and prints them.
+ * terminal, JSON, and stats modes. needs root to open the device.
  */
 
 #include <stdio.h>
@@ -76,7 +66,7 @@ static void signal_handler(int signo)
     }
 }
 
-// returns a static buffer - not thread-safe, but we're single-threaded
+// not thread-safe, but we're single-threaded so fine
 static const char *get_username(unsigned int uid)
 {
     struct passwd *pw = getpwuid(uid);
@@ -147,10 +137,7 @@ static void print_header(void)
     }
 }
 
-/*
- * Parse one event line from /dev/procwatch and print it.
- * Format: TYPE PID PPID UID TIMESTAMP_NS COMM [exit_code=N]
- */
+// event format: TYPE PID PPID UID TIMESTAMP_NS COMM [exit_code=N]
 static void process_line(const char *line)
 {
     char event_type[8];
@@ -161,6 +148,7 @@ static void process_line(const char *line)
     char extra[64] = "";
     char time_str[32];
 
+    // ugly but works for now - would break if the kernel format changes
     int fields = sscanf(line, "%7s %d %d %u %llu %63s %63[^\n]",
                         event_type, &pid, &ppid, &uid,
                         &timestamp, comm, extra);
@@ -238,7 +226,7 @@ static int monitor_events(int fd)
             if (errno == EINTR)
                 continue;
             if (errno == EAGAIN) {
-                usleep(10000);
+                usleep(10000); // 10ms poll - good enough
                 continue;
             }
             perror("read /dev/procwatch");

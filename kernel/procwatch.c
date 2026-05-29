@@ -1,13 +1,10 @@
 // SPDX-License-Identifier: GPL-2.0
 /*
- * procwatch.c - ProcWatch Kernel Module
+ * procwatch.c - kernel module for monitoring process lifecycle events
+ * via kprobes. Exposes events through /dev/procwatch as text lines.
  *
- * Real-time Linux process monitoring system using kprobes.
- * Hooks into kernel functions to capture fork, exec, and exit events.
- * Data is stored in a ring buffer and exposed via /dev/procwatch.
- *
- * Author: ProcWatch Contributors
- * License: GPL-2.0
+ * Kprobes instead of tracepoints because some tracepoint symbols aren't
+ * exported to modules depending on kernel config (learned this the hard way).
  */
 
 #include <linux/module.h>
@@ -36,8 +33,6 @@ MODULE_AUTHOR("ProcWatch Contributors");
 MODULE_DESCRIPTION("Real-time process monitoring via kprobes");
 MODULE_VERSION(PROCWATCH_VERSION_STRING);
 
-// ring buffer
-
 struct procwatch_ring_buffer {
     struct procwatch_event  events[RING_BUFFER_SIZE];
     unsigned int            head;
@@ -60,8 +55,6 @@ static atomic64_t         stat_dropped = ATOMIC64_INIT(0);
 static DECLARE_WAIT_QUEUE_HEAD(pw_waitqueue);
 static bool               pw_monitoring_active = false;
 static DEFINE_MUTEX(pw_dev_mutex);
-
-// ring buffer ops
 
 static int ring_buffer_init(void)
 {
@@ -91,6 +84,7 @@ static void ring_buffer_push(const struct procwatch_event *event)
     if (pw_buffer->count < RING_BUFFER_SIZE) {
         pw_buffer->count++;
     } else {
+        // buffer full, oldest event silently dropped
         pw_buffer->tail = (pw_buffer->tail + 1) % RING_BUFFER_SIZE;
         atomic64_inc(&stat_dropped);
     }
@@ -123,8 +117,7 @@ static void ring_buffer_clear(void)
     spin_unlock_irqrestore(&pw_buffer->lock, flags);
 }
 
-// event capture
-
+// TODO: add filtering by uid/pid/comm to reduce noise on busy systems
 static void capture_event(enum procwatch_event_type type,
                           struct task_struct *task, int exit_code)
 {
@@ -152,13 +145,13 @@ static void capture_event(enum procwatch_event_type type,
     }
 }
 
-// kprobe hooks: wake_up_new_task (fork), begin_new_exec (exec), do_exit (exit)
+// kprobes on wake_up_new_task, begin_new_exec, do_exit
+// note: wake_up_new_task is an internal symbol, not stable ABI
 
-// fork: first arg (rdi) is the new child task_struct
+// TODO: x86_64 only - ARM64 needs regs->regs[0] instead of regs->di
 static int fork_pre_handler(struct kprobe *p, struct pt_regs *regs)
 {
     struct task_struct *task;
-    /* First argument (x86_64: rdi register) is the new child task */
     task = (struct task_struct *)regs->di;
     if (task)
         capture_event(PW_EVENT_FORK, task, 0);
@@ -170,7 +163,7 @@ static struct kprobe fork_kp = {
     .pre_handler = fork_pre_handler,
 };
 
-// exec: current is already the execing task at this point
+// current is already the execing task when begin_new_exec fires
 static int exec_pre_handler(struct kprobe *p, struct pt_regs *regs)
 {
     capture_event(PW_EVENT_EXEC, current, 0);
@@ -182,7 +175,6 @@ static struct kprobe exec_kp = {
     .pre_handler = exec_pre_handler,
 };
 
-// exit: first arg (rdi) is the exit code
 static int exit_pre_handler(struct kprobe *p, struct pt_regs *regs)
 {
     long code = (long)regs->di;
@@ -194,8 +186,6 @@ static struct kprobe exit_kp = {
     .symbol_name = "do_exit",
     .pre_handler = exit_pre_handler,
 };
-
-// register/unregister all three probes
 
 static int register_probes(void)
 {
@@ -238,8 +228,6 @@ static void unregister_probes(void)
     unregister_kprobe(&fork_kp);
     pr_info("procwatch: kprobes unregistered\n");
 }
-
-// character device file ops
 
 static int pw_dev_open(struct inode *inode, struct file *file)
 {
@@ -353,7 +341,7 @@ static const struct file_operations pw_fops = {
     .unlocked_ioctl = pw_dev_ioctl,
 };
 
-// /proc/procwatch/stats
+// /proc/procwatch/stats - read-only, doesn't consume events from the ring buffer
 
 static struct proc_dir_entry *pw_proc_dir;
 static struct proc_dir_entry *pw_proc_stats;
@@ -406,8 +394,6 @@ static void remove_proc_entries(void)
         remove_proc_entry("procwatch", NULL);
 }
 
-// character device setup/teardown
-
 static int create_char_device(void)
 {
     int ret;
@@ -442,8 +428,6 @@ static void destroy_char_device(void)
     cdev_del(&pw_cdev);
     unregister_chrdev_region(pw_dev_num, 1);
 }
-
-// module init/exit
 
 static int __init procwatch_init(void)
 {
