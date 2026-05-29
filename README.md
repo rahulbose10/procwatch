@@ -1,6 +1,6 @@
 # ProcWatch - Linux Process Monitor
 
-Kernel module that tracks process lifecycle events (fork, exec, exit) using kprobes. Events are stored in a ring buffer inside the kernel and exposed through a character device at `/dev/procwatch`. There's also a user-space daemon and a simple Flask dashboard.
+Kernel module that tracks process lifecycle events (fork, exec, exit) using kprobes. Events are stored in a ring buffer inside the kernel and exposed through a character device at `/dev/procwatch`. There's also a user-space daemon that pretty-prints events to a terminal.
 
 This was written as a learning project to understand how kernel modules, kprobes, and character devices work together.
 
@@ -69,17 +69,6 @@ sudo ./procwatch_daemon --clear   # clear the ring buffer
 sudo ./procwatch_daemon --no-color
 ```
 
-### Web dashboard
-
-```bash
-pip3 install flask
-cd web
-sudo python3 app.py
-# open http://localhost:5000
-```
-
-Shows a live event table, fork/exec/exit counts, and a basic activity chart.
-
 ### Direct device access
 
 ```bash
@@ -110,10 +99,6 @@ procwatch/
 ├── daemon/
 │   ├── procwatch_daemon.c
 │   └── Makefile
-├── web/
-│   ├── app.py
-│   └── templates/
-│       └── index.html
 ├── docs/
 │   ├── ARCHITECTURE.md
 │   └── USAGE.md

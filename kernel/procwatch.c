@@ -78,6 +78,7 @@ static void ring_buffer_destroy(void)
 static void ring_buffer_push(const struct procwatch_event *event)
 {
     unsigned long flags;
+    // tried using mutex here first, crashed in interrupt context
     spin_lock_irqsave(&pw_buffer->lock, flags);
     memcpy(&pw_buffer->events[pw_buffer->head], event, sizeof(*event));
     pw_buffer->head = (pw_buffer->head + 1) % RING_BUFFER_SIZE;
@@ -137,6 +138,7 @@ static void capture_event(enum procwatch_event_type type,
     get_task_comm(event.comm, task);
 
     ring_buffer_push(&event);
+    // pr_info("DEBUG: event type=%d pid=%d\n", type, event.pid);
 
     switch (type) {
     case PW_EVENT_FORK: atomic64_inc(&stat_forks); break;
@@ -153,6 +155,7 @@ static int fork_pre_handler(struct kprobe *p, struct pt_regs *regs)
 {
     struct task_struct *task;
     task = (struct task_struct *)regs->di;
+    // pr_info("fork_pre: task=%p\n", task);
     if (task)
         capture_event(PW_EVENT_FORK, task, 0);
     return 0;

@@ -4,7 +4,6 @@
 
 ```bash
 sudo apt-get install build-essential linux-headers-$(uname -r)
-pip3 install flask   # only needed for the web dashboard
 ```
 
 ## Build
@@ -42,13 +41,6 @@ sudo ./procwatch_daemon --json        # JSON, one object per line
 sudo ./procwatch_daemon --stats       # print stats and exit
 sudo ./procwatch_daemon --clear       # flush the ring buffer
 sudo ./procwatch_daemon --no-color    # useful when redirecting to a file
-```
-
-## Web dashboard
-
-```bash
-sudo python3 web/app.py
-# open http://localhost:5000
 ```
 
 ## Troubleshooting

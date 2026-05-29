@@ -2,7 +2,7 @@
 
 ## How it fits together
 
-The kernel module hooks into fork/exec/exit via kprobes, stuffs events into a ring buffer, and exposes them through `/dev/procwatch`. The daemon reads that device and either pretty-prints to a terminal or spits out JSON. The Flask dashboard runs the daemon in JSON mode in a background thread and streams events to the browser over SSE.
+The kernel module hooks into fork/exec/exit via kprobes, stuffs events into a ring buffer, and exposes them through `/dev/procwatch`. The daemon reads that device and either pretty-prints to a terminal or spits out JSON.
 
 ## Kernel module
 
@@ -48,10 +48,6 @@ struct procwatch_event {
 ## Daemon
 
 Single-threaded C. Opens the device, reads in a loop, parses lines with sscanf, formats and prints. SIGINT/SIGTERM set a flag that breaks the loop.
-
-## Web dashboard
-
-Flask app with a background thread that reads `/dev/procwatch` continuously and stores events in a deque (capped at 1000). Three endpoints: `/api/events` returns the deque as JSON, `/api/stats` calls the ioctl, `/api/stream` is the SSE endpoint the browser connects to for live updates. The browser also polls `/api/stats` every 2 seconds as a fallback.
 
 ## Module load/unload order
 
