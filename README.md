@@ -6,7 +6,7 @@ This was written as a learning project to understand how kernel modules, kprobes
 
 ## How it works
 
-The kernel module registers kprobe handlers on `do_fork`, `do_execve`, and the process exit path. Each event captures the PID, PPID, UID, process name, and a timestamp. Events go into a circular buffer (4096 slots) protected by a spinlock. The buffer overwrites the oldest entry when full.
+The kernel module registers kprobe handlers on `wake_up_new_task`, `begin_new_exec`, and `do_exit`. Each event captures the PID, PPID, UID, process name, and a timestamp. Events go into a circular buffer (4096 slots) protected by a spinlock. The buffer overwrites the oldest entry when full.
 
 User space reads events from `/dev/procwatch` as newline-delimited text. The daemon pretty-prints them in the terminal or as JSON. `/proc/procwatch/stats` shows counts without consuming events from the buffer.
 
@@ -124,11 +124,19 @@ procwatch/
 
 ## Technical notes
 
-- kprobes on `do_fork`, `do_execve`, and the exit path
+- kprobes on `wake_up_new_task`, `begin_new_exec`, and `do_exit`
 - spinlock-protected ring buffer, O(1) push/pop
 - character device supports blocking read, poll, and ioctl for stats
 - events are plain text, one per line
 - ring buffer takes about 400 KB of kernel memory
+
+Tested on Ubuntu 24.04 with kernel 6.8.0-94-generic.
+
+## Known limitations
+
+- x86_64 only; no support for other architectures
+- The ring buffer has a fixed size (4096 slots), so events can be dropped under heavy process creation load
+- kprobe target symbols (`wake_up_new_task`, `begin_new_exec`, `do_exit`) are internal kernel functions and may be renamed or inlined across kernel versions, breaking the probes at module load time
 
 ## License
 
